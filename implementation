@@ -1,0 +1,98 @@
+import numpy as np
+from PIL import Image
+import cv2
+import os
+
+# Directory containing the images
+image_dir = "bmp"
+output_dir="output_OCR"
+# List to store the loaded images
+loaded_images = []
+new_images=[]
+
+new_width = 224
+new_height = 224
+
+# Iterate over the files in the directory
+for filename in os.listdir(image_dir):
+    if filename.endswith(".bmp"):  # Adjust the file extension as per your image format
+        file_path = os.path.join(image_dir, filename)
+        image = Image.open(file_path)
+        image = image.convert("RGB")
+        resized_image = image.resize((new_width, new_height))
+        grayscale_image = resized_image.convert("L")
+        loaded_images.append(grayscale_image)
+
+for image in loaded_images :        
+        if image.mode != "L":
+            image = image.convert("L")
+        
+        
+        # Convert image to NumPy array
+        image_array = np.array(image)
+        
+        
+        # Normalize the pixel values
+        normalized_image = (image_array.astype(np.float32) - 0) / 255.0
+        
+        # Convert the normalized image back to PIL image
+        normalized_image = (normalized_image * 255).astype(np.uint8)  # Convert back to appropriate data type
+        normalized_image = Image.fromarray(normalized_image)
+        
+        # Save the grayscale image
+        output_path = os.path.join(output_dir, filename[:-4] + ".png")  # Change the extension to .png
+        normalized_image.save(output_path)
+        new_images.append(normalized_image)
+
+# Process the loaded images as needed
+#for image in loaded_images:
+    # Perform operations on each image
+    #cv2.imshow(image)
+   
+ label_dir = "tru"
+labels = []
+
+for filename in os.listdir(label_dir):
+    if filename.endswith(".tru"):
+        file_path = os.path.join(label_dir, filename)
+        
+        # Read the contents of the label file
+        with open(file_path, "r") as file:
+            lines = file.readlines()
+            
+            # Extract the label from the desired line (e.g., seventh line)
+            label = lines[6].strip()  # Assuming the label is on the seventh line
+            
+            # Add the label to the list
+            labels.append(label)
+
+#for label in labels:
+   # print(label)
+  
+from sklearn.model_selection import train_test_split
+import os
+
+train_paths, test_paths, train_labels, test_labels = train_test_split(new_images, labels, test_size=0.2, random_state=42)
+
+# Print the number of samples in each set
+print("Training set size:", len(train_paths))
+print("Test set size:", len(test_paths))
+
+
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+
+# Define the CNN model
+model = keras.Sequential([
+    # Convolutional layers
+    layers.Conv2D(32, (3, 3), activation='relu', input_shape=(new_height, new_width, channels)),
+    layers.MaxPooling2D((2, 2)),
+    layers.Conv2D(64, (3, 3), activation='relu'),
+    layers.MaxPooling2D((2, 2)),
+    # Flatten the 2D feature maps to 1D
+    layers.Flatten(),
+    # Fully connected layers
+    layers.Dense(64, activation='relu'),
+    layers.Dense(num_classes, activation='softmax')  # Adjust num_classes based on your problem
+])
